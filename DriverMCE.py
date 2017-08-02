@@ -2,6 +2,10 @@
 #Driver for running the ModeClassifierEnsemble tests
 #Warning, this code will probably take a while to run.
 
+import logging
+# import emission.analysis.classification.inference.mode.oldMode as om
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename='MCEoutput.log')
+
 import numpy as np
 import pandas as pd 
 from sklearn.ensemble import RandomForestClassifier
@@ -21,9 +25,6 @@ from pymongo import MongoClient
 from sklearn.tree import DecisionTreeClassifier
 from time import clock
 from uuid import UUID
-import logging
-# import emission.analysis.classification.inference.mode.oldMode as om
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename='MCEoutput.log')
 ##########
 THRESHOLD_TEST_CSV			= "threshold.csv"  #This driver outputs two csvs with the results. These are their filepaths
 CONFIDENCE_TEST_CSV 		= "confidence.csv"
@@ -38,14 +39,13 @@ warnings.simplefilter("ignore")
 # yin_uuid    = UUID('e211dd91-423f-31ff-a1f8-89e5fdecc164')
 # culler_uuid = UUID('6a488797-5be1-38aa-9700-5532be978ff9') 
 serverName = 'localhost'
-etc.dropAllCollections(get_db())
 ModesColl = get_mode_db()
 
 SectionsColl = get_section_db()
-etc.loadTable(serverName, "Stage_Modes", "emission/tests/data/modes.json")
-etc.loadTable(serverName, "Stage_Sections", "../culler_all_trips")
+# etc.loadTable(serverName, "Stage_Modes", "emission/tests/data/modes.json")
+# etc.loadTable(serverName, "Stage_Sections", "../culler_all_trips")
 # etc.loadTable(serverName, "Stage_Sections", "../tom_all_trips")
-etc.loadTable(serverName, "Stage_Sections", "../yin_all_trips")
+# etc.loadTable(serverName, "Stage_Sections", "../yin_all_trips")
 
 
 
@@ -63,7 +63,14 @@ logging.debug("Size of backup dataframe is %s" % str(BACKUP_DATA.shape))
 ALL_DATA = BACKUP_DATA.append(SECTION_DATA)
 # We are only using confirmed data for this test. Even the threshold test
 #	because we would need to simulate "prompting "
-all_target_values 		= ALL_DATA[TARGET].unique()
+all_target_values 		= list(ALL_DATA[TARGET].unique())
+
+for idx in range(len(all_target_values)):
+	try: 
+		float(all_target_values[idx])
+	except:
+		all_target_values.pop(idx)
+
 all_user_uuids 			= ALL_DATA['user_id'].unique()
 
 logging.debug("all target values: %s" % str(all_target_values))
@@ -104,7 +111,9 @@ for MY_USER_ID in user_uuids_to_test:
 			to_sample 				= ALL_DATA[ALL_DATA[TARGET] == value]
 			new_row 				= to_sample.sample(n=1)
 			EVERYONE_BUT_ME_DATA	= EVERYONE_BUT_ME_DATA.append(new_row)
-			logging.debug("added target value %s" % str(value))
+			logging.debug("added target value %s to EVERYONE_BUT_ME_DATA" % str(value))
+		logging.debug("New unique values for EVERYONE_BUT_ME_DATA are %s" % str(list(EVERYONE_BUT_ME_DATA[TARGET].unique())))
+
 
 	MY_DATA 					  = ALL_DATA[ALL_DATA['user_id'] == MY_USER_ID].sort_values(['section_end_datetime'], ascending=True).reset_index(drop=True) 
 	#We have to sort only MY_DATA here because we are using it to test as well as train.
@@ -121,7 +130,8 @@ for MY_USER_ID in user_uuids_to_test:
 			to_sample 				= ALL_DATA[ALL_DATA[TARGET] == value]
 			new_row 				= to_sample.sample(n=1)
 			MY_DATA_TRAIN 			= MY_DATA_TRAIN.append(new_row)
-			logging.debug("added target value %s" % str(value))
+			logging.debug("added target value %s to MY_DATA_TRAIN" % str(value) )
+		logging.debug("New unique values for MY_DATA_TRAIN are %s" % str(list(MY_DATA_TRAIN[TARGET].unique())))
 
 	WEIGHTER_TRAIN 			= MY_DATA.iloc[int((MY_DATA.shape[0])*MY_DATA_TEST_SIZE*-1):int((MY_DATA.shape[0])*INTELLIGENT_TRAIN_DATA_SIZE*-1)]
 
@@ -164,7 +174,7 @@ for MY_USER_ID in user_uuids_to_test:
 	WEIGHTER_TRAIN_DF 							= pd.DataFrame(WEIGHTER_TRAIN_MATRIX, index=WEIGHTER_TRAIN.index, columns=fixed_predictors)
 	WEIGHTER_TRAIN_DF[TARGET]					= WEIGHTER_TRAIN_RV
 
-	logging.debug("Processing weighter test matrix")
+	logging.debug("Processing weighter test matrix; Don't worry if we can't find these confirmed modes--We're not supposed to here")
 	MY_TEST_MATRIX, MY_TEST_RV 					= generateFeatureMatrixAndResultVectorStep(MY_DATA_TEST)
 	MY_TEST_DF 									= pd.DataFrame(MY_TEST_MATRIX, index=MY_DATA_TEST.index, columns=fixed_predictors)
 

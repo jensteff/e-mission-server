@@ -1,12 +1,15 @@
 #Jenny Steffens 
 #7.12.17
 #An ensemble of classification algorithms to be used for the e-missions project
+# import logging
+
+# logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename='MCEFunctionsoutput.log')
 from warnings import warn
 import pandas as pd
 import numpy as np
 from time import clock
 import sys
-import logging
+
 
 class ModeClassifier:
 	def __init__(self, Model=None, training_function=None, scoring_function=None, prediction_function=None, probability_function=None, update_with_personal_data=True):
@@ -613,7 +616,8 @@ class ModeClassifierEnsemble:
 			feature_df_row 				= pd.DataFrame(featureMatrix, index=[section.index], columns=column_names)
 
 		elif dtype.lower() == 'tuple':
-			featureMatrix, resultVector = generateFeatureMatrixAndResultVectorStepForTuple(section, featureLabels=column_names)
+			featureMatrix 			    = generateFeatureMatrixStepForTuple(section, featureLabels=column_names)
+			
 			feature_df_row 				= pd.DataFrame(featureMatrix, index=[section.Index], columns=column_names)
 		else:
 			raise ValueError("dtype for processSection must be 'dataframe' or 'tuple'. %s was recieved" % dtype)
@@ -729,8 +733,8 @@ def generateFeatureMatrixAndResultVectorStep(examples_dataframe, dtype="datafram
 	i = 0
 	for section in examples_dataframe.itertuples():
 		#iterrows is really slow. itertuples is faster, but it requires all feature labels be "proper," i.e. contain no spaces
-		if section.Index % 100 == 0:
-			logging.debug("Processing backup record %s " % section.Index)
+		if i % 100 == 0:
+			logging.debug("Processing record %s " % i)
 		try: 
 			resultVector[i] = section.confirmed_mode
 
@@ -748,7 +752,7 @@ def generateFeatureMatrixAndResultVectorStep(examples_dataframe, dtype="datafram
 		i += 1
 	return (featureMatrix, resultVector)
 
-def generateFeatureMatrixAndResultVectorStepForTuple(section_tuple, featureLabels=["distance", "duration", "first filter mode", "sectionId", "avg speed",
+def generateFeatureMatrixStepForTuple(section_tuple, featureLabels=["distance", "duration", "first filter mode", "sectionId", "avg speed",
 						  "speed EV", "speed variance", "max speed", "max accel", "isCommute",
 						  "heading change rate", "stop rate", "velocity change rate",
 						  "start lat", "start lng", "stop lat", "stop lng",
@@ -763,15 +767,24 @@ def generateFeatureMatrixAndResultVectorStepForTuple(section_tuple, featureLabel
 		updateFeatureMatrixRowWithSection(featureMatrix, 0, section_tuple, Index=section_tuple.Index, bus_cluster=bus_cluster, train_cluster=train_cluster)
 	except Exception, e:
 		logging.debug("(Tuple) Couldn't process section %s due to error %s" % (section_tuple, e))
-	try:
-		resultVector[0] = section_tuple.confirmed_mode
-	except Exception, e:
-		logging.debug("(Tuple) Couldn't set result vector for section %s due to error %s" % (section_tuple, e))
-		if not isinstance(e, AttributeError):
-			logging.debug("(Tuple) Interpreted confirmed mode as %s" % section_tuple.confirmed_mode)
-		return featureMatrix, resultVector
+	
+	# if confirmed_mode is not None:
+	# 	try:
+	# 		resultVector[0] = confirmed_mode
+	# 	except Exception, e:
+	# 		logging.debug("(Tuple) Couldn't set result vector for section %s due to error %s" % (section_tuple, e))
+	# 		logging.debug("(Tuple) Interpreted confirmed mode as %s" % section_tuple.confirmed_mode)
 
-	return featureMatrix, resultVector
+	# else:
+	# 	try:
+	# 		resultVector[0] = section_tuple.confirmed_mode
+	# 	except Exception, e:
+	# 		logging.debug("(Tuple) Couldn't set result vector for section %s due to error %s" % (section_tuple, e))
+	# 		if not isinstance(e, AttributeError):
+	# 			logging.debug("(Tuple) Interpreted confirmed mode as %s" % section_tuple.confirmed_mode)
+	# 		return featureMatrix, resultVector
+
+	return featureMatrix
 
 def updateFeatureMatrixRowWithSection(featureMatrix, i, section, Index=0, bus_cluster=None, train_cluster=None, air_cluster=None):
 	featureMatrix[i, 0] = section.distance
