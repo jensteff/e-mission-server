@@ -50,7 +50,7 @@ BACKUP_DATA 			 	= pd.DataFrame(list(backupSections.find({'$and' : [{ 'confirmed
 
 ALL_DATA = BACKUP_DATA.append(SECTION_DATA)
 
-
+print ALL_DATA.iloc[:11]
 # We are only using confirmed data for this test. Even the threshold test
 #	because we would need to simulate "prompting "
 all_target_values 		= ALL_DATA[TARGET].unique()
