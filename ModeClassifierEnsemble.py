@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from time import clock
 import sys
+import logging
 
 class ModeClassifier:
 	def __init__(self, Model=None, training_function=None, scoring_function=None, prediction_function=None, probability_function=None, update_with_personal_data=True):
@@ -218,10 +219,12 @@ class ModeClassifierEnsemble:
 ################
 
 	def generateWinnerColumn(self, training_examples, training_target):
+		logging.debug("Generating winner column")
 		predictions_prob_df = self.predictProb(training_examples)
 		winner_list = []
 		row_winner = ""
 		target_name = training_target.name
+		logging.debug("training target name: %s" % target_name)
 
 		for index, correct_class in training_target.iteritems(): 
 			max_confidence = -1
@@ -245,6 +248,7 @@ class ModeClassifierEnsemble:
 
 		if count_winners != self._classifier_count:
 			warn("Not all algorithms accounted for in winner list. Proceed with caution.")
+			logging.debug("Not all algorithms accounted for in winner list. Proceed with caution.")
 
 		return winner_list
 
@@ -263,7 +267,10 @@ class ModeClassifierEnsemble:
 		algorithm_prediction_dataframe = self.predict(testing_examples)
 		weights = pd.DataFrame()
 		total_correct = 0.0
-		for classifier_name in algorithm_prediction_dataframe:		
+		for classifier_name in algorithm_prediction_dataframe:	
+			logging.debug("In generateNaiveWeights")
+			logging.debug("algorithm prediction dataframe for %s is %s" % (classifier_name, algorithm_prediction_dataframe[classifier_name]))
+			logging.debug("Target column is %s:" % target_column)	
 			num_correct = np.sum((algorithm_prediction_dataframe[classifier_name]) == target_column)
 			weights[classifier_name] = np.array([num_correct])
 			total_correct += num_correct
@@ -302,8 +309,11 @@ class ModeClassifierEnsemble:
 			for idx, column_name in enumerate(columns):
 				columns[idx] = sign_with_label + "_" + columns[idx]
 			mean_prob.columns = columns
+			logging.debug("mean prob: %s" % mean_prob)
+
 			return mean_prob
 
+		logging.debug("mean prob: %s" % mean_prob)
 		return mean_prob
 
 	def intelligentWeightedMeanProb(self, prediction_examples, predictions_prob_df=None, sign_with_label=False):
@@ -321,6 +331,7 @@ class ModeClassifierEnsemble:
 			for classifier_name in self._Classifiers.iterkeys():
 				column = classifier_name+"_"+str(label)
 				if column in predictions_prob_df:
+					logging.debug("processing intelligent weighted prob %s for classifier %s" % (str(label), classifier_name))
 					weighted_prob[label] = np.round(weighted_prob[label] + ((intelligent_weights_df[classifier_name])*(predictions_prob_df[classifier_name+"_"+str(label)])), decimals=3)
 			
 		if sign_with_label:
@@ -328,8 +339,11 @@ class ModeClassifierEnsemble:
 			for idx, column_name in enumerate(columns):
 				columns[idx] = sign_with_label + "_" + columns[idx]
 			weighted_prob.columns = columns
+			logging.debug("weighted prob: %s" % weighted_prob)
+
 			return weighted_prob
 
+		logging.debug("weighted prob: %s" % weighted_prob)
 		return weighted_prob
 		
 	def naiveWeightedMeanProb(self, prediction_examples, predictions_prob_df=None, sign_with_label=False):
@@ -339,21 +353,25 @@ class ModeClassifierEnsemble:
 		if predictions_prob_df is None:
 			predictions_prob_df = self.predictProb(prediction_examples)
 
+		logging.debug("Naive mean weights is %s" % self._naive_mean_weights)
 		naive_prob = pd.DataFrame(index=predictions_prob_df.index)
 		for label in self._target_category_labels:		
 			naive_prob[label] = np.zeros(len(prediction_examples))
 			for classifier_name in self._Classifiers.iterkeys():
 				column = classifier_name+"_"+str(label)
 				if column in predictions_prob_df:
-					naive_prob[label] =np.round(naive_prob[label] + ((self._naive_mean_weights[classifier_name].iloc[0])*(predictions_prob_df[classifier_name+"_"+str(label)])), decimals=3)
+					logging.debug("processing naive prob %s for classifier %s" % (str(label), classifier_name))
+					naive_prob[label] = np.round(naive_prob[label] + ((self._naive_mean_weights[classifier_name].iloc[0])*(predictions_prob_df[classifier_name+"_"+str(label)])), decimals=3)
 		
 		if sign_with_label:
 			columns = list(naive_prob.columns.values)
 			for idx, column_name in enumerate(columns):
 				columns[idx] = sign_with_label + "_" + columns[idx]
 			naive_prob.columns = columns
-			return naive_prob
+			logging.debug("naive prob: %s" % naive_prob)
 
+			return naive_prob
+		logging.debug("naive prob: %s" % naive_prob)
 		return naive_prob
 
 ################## Functions for the Confidence Test
@@ -383,15 +401,18 @@ class ModeClassifierEnsemble:
 				new_columns = list(agg_df.columns.values)
 				for idx in range(len(new_columns)):
 					new_columns[idx] = str(aggregator_name) + "_" + str(new_columns[idx])
+				logging.debug("new columns: %s" % new_columns)
 				agg_df.columns = new_columns
 				dataframe_list.append(agg_df)
 
 		final_df = pd.concat(dataframe_list, axis=1)
 		if path_or_buf is not None:
 			final_df.to_csv(path_or_buf=path_or_buf)
+			logging.debug("final dataframe stored in %s" % path_or_buf)
 		if timeit: 
 			dur = clock()-start
 			print "testConfidenceMeasures took %s seconds" % str(dur)
+			logging.debug("testConfidenceMeasures took %s seconds" % str(dur))
 
 		return final_df
 
@@ -406,6 +427,7 @@ class ModeClassifierEnsemble:
 			correctness_df[column_name] = ((guess_df == target_column)*1)
 
 		correctness_df['answer'] = target_column
+		logging.debug("correctness_df: %s" % correctness_df)
 		return correctness_df
 
 
@@ -425,7 +447,8 @@ class ModeClassifierEnsemble:
 				try:
 					agg_confidence = agg_df_dict[aggregator_name][correct_class].loc[example_idx]		
 				except KeyError:
-					warn("Target category %s was not found for Aggregator %s" % correct_class, aggregator_name)
+					warn("Target category %s was not found for Aggregator %s" % str(correct_class), str(aggregator_name))
+					logging.debug("Target category %s was not found for Aggregator %s" % (str(correct_class), str(aggregator_name)))
 					agg_confidence = 0.0
 				column_name = str(aggregator_name) + "_confidence"
 				confidence_df[column_name].loc[example_idx] = agg_confidence
@@ -435,6 +458,7 @@ class ModeClassifierEnsemble:
 		confidence_df['agg_with_highest_confidence']	= max_confidence_alg
 		confidence_df['highest_confidence']				= confidence
 
+		logging.debug("confidence_df: %s" % confidence_df)
 		return confidence_df
 
 	def testConfidenceFirstAndSecondGuessDifference(self, testing_examples, target_column, predictions_prob_df=None):
@@ -452,6 +476,7 @@ class ModeClassifierEnsemble:
 			difference_df[(str(aggregator_name)+"_second")] 	= first_and_second[:,1]
 			difference_df[(str(aggregator_name)+"_difference")] = difference_df[(str(aggregator_name)+"_first")] - difference_df[(str(aggregator_name)+"_second")]
 
+		logging.debug("difference_df: %s" % difference_df)
 		return difference_df
 
 ############# Functions for the Threshold Test
@@ -497,14 +522,18 @@ class ModeClassifierEnsemble:
 		if best_aggregator_func is None:
 			best_aggregator_func = self._Aggregators[self._BestAggregator]
 
+		logging.debug("Best aggregator function is %s" % best_aggregator_func.__name__)
 		for threshold in threshold_list:
-			print "testing threshold %s " % threshold
+			print "testing threshold %s " % str(threshold)
+			logging.debug("Testing threshold %s" % threshold)
 			thres_request_df = self.processSectionsForThreshold(examples_dataframe, threshold, examples_target=examples_target, best_aggregator_func=best_aggregator_func, time_since=time_since, trips_since=trips_since, sign_with_label=True, column_names=column_names)
+			logging.debug("threshold df for threshold %s: %s" % (threshold, thres_request_df))
 			thresholds_df = pd.concat([thresholds_df, thres_request_df], axis=1)
-
+			logging.debug("New thresholds_df shape: %s" % str(thresholds_df.shape))
 			for classifier_name in base_training_set_dict:
 				self.setTrainingDataForClassifier(classifier_name, base_training_set_dict.copy()[classifier_name][0], base_training_set_dict.copy()[classifier_name][1])
-		
+				logging.debug("training data set for classifier %s" % classifier_name)
+
 		if attach_target:
 			thresholds_df['target'] = examples_target
 
@@ -512,12 +541,16 @@ class ModeClassifierEnsemble:
 			new_column_names = list(thresholds_df.columns.values)
 			for idx in range(len(new_column_names)):
 				new_column_names[idx] = str(new_column_names[idx]) + "_" + str(self._BestAggregator)
-
+			logging.debug("Sign with aggregator column names: %s" % new_column_names)
+		
 		if path_or_buf is not None:
 			thresholds_df.to_csv(path_or_buf=path_or_buf)
 
 		if timeit:
-			print "testThresholds took %s seconds" % (clock()-start)
+			end = clock()
+			print "testThresholds took %s seconds" % (end-start)
+			logging.debug("testThresholds took %s seconds" % (end-start))
+
 		return thresholds_df
 
 	def processSectionsForThreshold(self, examples_dataframe, threshold, examples_target=None, path_or_buf=None, best_aggregator_func=None, time_since=None, trips_since=None, sign_with_label=True, column_names = ["distance", "duration", "first_filter_mode", "sectionId", "avg_speed",
@@ -546,6 +579,11 @@ class ModeClassifierEnsemble:
 			conf  = conf.append(c)
 			req   = req.append(r)
 
+		logging.debug("generated predictions: %s" % gpred)
+		logging.debug("stored predictions: %s" % spred)
+		logging.debug("confidences: %s" % conf)
+		logging.debug("request: %s" % req)
+
 		thres_request_df['generated_prediction'] = gpred
 		thres_request_df['stored_prediction'] 	 = spred
 		thres_request_df['confidence']		 	 = conf
@@ -554,6 +592,7 @@ class ModeClassifierEnsemble:
 		if sign_with_label:
 			new_column_names = ['generated_prediction_threshold_%s' % threshold,'stored_prediction_threshold_%s' % threshold, 'confidence_threshold_%s' % threshold, 'requested_threshold_%s' % threshold]
 			thres_request_df.columns = new_column_names
+			logging.debug("new column names: %s" % new_column_names)
 
 		return thres_request_df
 
@@ -569,6 +608,7 @@ class ModeClassifierEnsemble:
 			best_aggregator_func = self._Aggregators[self._BestAggregator]
 
 		if dtype.lower() == 'dataframe':
+			lo
 			featureMatrix, resultVector = generateFeatureMatrixAndResultVectorStep(section, featureLabels=column_names)
 			feature_df_row 				= pd.DataFrame(featureMatrix, index=[section.index], columns=column_names)
 
@@ -588,6 +628,7 @@ class ModeClassifierEnsemble:
 		if request:
 
 			if confirmed_mode is not None:
+				logging.debug("confirmed mode not None")
 				stored_prediction = pd.Series(data=confirmed_mode, index=generated_prediction.index, dtype=generated_prediction.dtype)
 			else:
 				try:
@@ -597,8 +638,7 @@ class ModeClassifierEnsemble:
 						stored_prediction = pd.Series(data=section.confirmed_mode, index=generated_prediction.index, dtype=generated_prediction.dtype)
 
 				except KeyError:
-					print "For simulating request, a confirmed mode is needed. Couldn't find confirmed_mode in ",
-					print section
+					logging.debug("For simulating request, a confirmed mode is needed. Couldn't find confirmed_mode in %s" % section)
 					stored_prediction = pd.Series(data=None, index=generated_prediction.index, dtype=generated_prediction.dtype)
 
 			if stored_prediction is not None:	
@@ -607,6 +647,7 @@ class ModeClassifierEnsemble:
 					if self._Classifiers[classifier_name].update_with_personal_data:
 						self.addToClassifierTrainingData(feature_df_row, stored_prediction, classifier_name)
 						to_train.append(classifier_name)
+				logging.debug("Classifiers to train: %s" % to_train)
 				self.trainEnsemble(classifier_names=to_train)
 
 		return generated_prediction, stored_prediction, guess_confidence, pd.Series(data=request, index=generated_prediction.index)
@@ -689,17 +730,21 @@ def generateFeatureMatrixAndResultVectorStep(examples_dataframe, dtype="datafram
 	for section in examples_dataframe.itertuples():
 		#iterrows is really slow. itertuples is faster, but it requires all feature labels be "proper," i.e. contain no spaces
 		if section.Index % 100 == 0:
-			print "Processing backup record %s " % section.Index
+			logging.debug("Processing backup record %s " % section.Index)
 		try: 
 			resultVector[i] = section.confirmed_mode
+
 		except Exception, e:
 			if isinstance(e, AttributeError):
 				warn("confirmed_mode not found in section %s" % section.Index)
+				logging.debug("confirmed_mode not found in section %s" % section.Index)
 			else:
 				print "result vector not set due to error %s" % e
-	
-		updateFeatureMatrixRowWithSection(featureMatrix, i, section, Index=section.Index, bus_cluster=bus_cluster, train_cluster=train_cluster)			
-	
+				logging.debug("interpreted confirmed mode as %s" % section.confirmed_mode)
+		try:
+			updateFeatureMatrixRowWithSection(featureMatrix, i, section, Index=section.Index, bus_cluster=bus_cluster, train_cluster=train_cluster)			
+		except Exception, e:
+			logging.debug("Couldn't process section %s due to error %s" % (section, e))
 		i += 1
 	return (featureMatrix, resultVector)
 
@@ -714,10 +759,16 @@ def generateFeatureMatrixAndResultVectorStepForTuple(section_tuple, featureLabel
 	resultVector = np.zeros(1)
 	if bus_cluster is None or train_cluster is None:
 		bus_cluster, train_cluster = generateBusAndTrainStopStep()
-	updateFeatureMatrixRowWithSection(featureMatrix, 0, section_tuple, Index=section_tuple.Index, bus_cluster=bus_cluster, train_cluster=train_cluster)
+	try:
+		updateFeatureMatrixRowWithSection(featureMatrix, 0, section_tuple, Index=section_tuple.Index, bus_cluster=bus_cluster, train_cluster=train_cluster)
+	except Exception, e:
+		logging.debug("(Tuple) Couldn't process section %s due to error %s" % (section_tuple, e))
 	try:
 		resultVector[0] = section_tuple.confirmed_mode
-	except:
+	except Exception, e:
+		logging.debug("(Tuple) Couldn't set result vector for section %s due to error %s" % (section_tuple, e))
+		if not isinstance(e, AttributeError):
+			logging.debug("(Tuple) Interpreted confirmed mode as %s" % section_tuple.confirmed_mode)
 		return featureMatrix, resultVector
 
 	return featureMatrix, resultVector
