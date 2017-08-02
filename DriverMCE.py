@@ -4,10 +4,11 @@
 
 import logging
 # import emission.analysis.classification.inference.mode.oldMode as om
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename='MCEoutput.log')
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)#, filename='MCEoutput.log')
 
 import numpy as np
 import pandas as pd 
+import traceback
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import train_test_split
 from sklearn.naive_bayes import GaussianNB
@@ -47,15 +48,26 @@ SectionsColl = get_section_db()
 # etc.loadTable(serverName, "Stage_Sections", "../tom_all_trips")
 # etc.loadTable(serverName, "Stage_Sections", "../yin_all_trips")
 
+logger = logging.getLogger()
+# Configure logger to write to a file...
 
+def myexcepthook(*exc_info):
+    text = "".join(traceback.format_exception(*exc_info))
+    logging.error("Unhandled exception: %s", text)
+
+# def log_uncaught_exceptions(ex_cls, ex, tb):
+# 	logging.critical(''.join(traceback.format_tb(tb)))
+# 	logging.critical('{0}: {1}'.format(ex_cls, ex))
+# Install exception handler
+sys.excepthook = myexcepthook
 
 
 backupSections = MongoClient('localhost').Backup_database.Stage_Sections
 
 start = clock()
 
-SECTION_DATA 				= pd.DataFrame(list(SectionsColl.find({'$and' : [{ 'confirmed_mode' : {'$exists' : True }}, {'confirmed_mode' : {'$ne' : ''}}]})))
-BACKUP_DATA 			 	= pd.DataFrame(list(backupSections.find({'$and' : [{ 'confirmed_mode' : {'$exists' : True }}, {'confirmed_mode' : {'$ne' : ''}}]})))
+SECTION_DATA 				= pd.DataFrame(list(SectionsColl.find({'$and' : [{ 'confirmed_mode' : {'$exists' : True }}, {'confirmed_mode' : {'$ne' : ''}}, {'confirmed_mode': {'$ne' : 'Please Specify'}}]})))
+BACKUP_DATA 			 	= pd.DataFrame(list(backupSections.find({'$and' : [{ 'confirmed_mode' : {'$exists' : True }}, {'confirmed_mode' : {'$ne' : ''}}, {'confirmed_mode': {'$ne' : 'Please Specify'}}]})))
 
 logging.debug("Size of section dataframe is %s" % str(SECTION_DATA.shape))
 logging.debug("Size of backup dataframe is %s" % str(BACKUP_DATA.shape))
@@ -64,7 +76,7 @@ ALL_DATA = BACKUP_DATA.append(SECTION_DATA)
 # We are only using confirmed data for this test. Even the threshold test
 #	because we would need to simulate "prompting "
 all_target_values 		= list(ALL_DATA[TARGET].unique())
-
+logging.debug("All target values found in dataset: %s" % all_target_values)
 for idx in range(len(all_target_values)):
 	try: 
 		float(all_target_values[idx])
@@ -73,7 +85,7 @@ for idx in range(len(all_target_values)):
 
 all_user_uuids 			= ALL_DATA['user_id'].unique()
 
-logging.debug("all target values: %s" % str(all_target_values))
+logging.debug("all target values after cleaning: %s" % str(all_target_values))
 logging.debug("all user uuids: %s" % str(all_user_uuids))
 
 if len(all_user_uuids) <= 100:

@@ -273,10 +273,21 @@ class ModeClassifierEnsemble:
 		for classifier_name in algorithm_prediction_dataframe:	
 			logging.debug("In generateNaiveWeights")
 			logging.debug("algorithm prediction dataframe for %s is %s" % (classifier_name, algorithm_prediction_dataframe[classifier_name]))
+			logging.debug("shape is %s" % str(algorithm_prediction_dataframe[classifier_name].shape))
 			logging.debug("Target column is %s:" % target_column)	
-			num_correct = np.sum((algorithm_prediction_dataframe[classifier_name]) == target_column)
+			logging.debug("shape is %s" % str(target_column.shape))
+			logging.debug("algorithm_prediction_dataframe with reset index is %s" % algorithm_prediction_dataframe[classifier_name].reset_index(drop=True))
+			logging.debug("target_column with reset index is %s" % target_column.reset_index(drop=True))
+			column_data = (algorithm_prediction_dataframe[classifier_name].reset_index(drop=True)) == (target_column.reset_index(drop=True))
+
+			num_correct = np.sum(column_data.astype(float))
+			logging.debug("num_correct is %s" % str(num_correct))
 			weights[classifier_name] = np.array([num_correct])
 			total_correct += num_correct
+			logging.debug("algorithm prediction dataframe for %s is %s" % (classifier_name, algorithm_prediction_dataframe[classifier_name]))
+
+			logging.debug("Target column is %s:" % target_column)	
+		logging.debug("total_correct is %s" % str(total_correct))
 
 		for classifier_name in self._Classifiers.iterkeys():
 			weights[classifier_name] = np.around((weights[classifier_name]/total_correct), decimals=3)
@@ -422,15 +433,26 @@ class ModeClassifierEnsemble:
 	def testConfidenceCorrectLabeling(self, testing_examples, target_column, predictions_prob_df=None):
 		correctness_df 			= pd.DataFrame(columns=['answer'], index=testing_examples.index)
 		predictions_prob_df     = self.predictProb(testing_examples)
-
+		logging.debug("In testConfidenceCorrectLabeling")
 		for aggregator_name in self._Aggregators.iterkeys():
 			agg_df = self._Aggregators[aggregator_name](testing_examples, predictions_prob_df=predictions_prob_df)
 			guess_df = agg_df.idxmax(axis=1)
 			column_name = str(aggregator_name) + "_correct"
-			correctness_df[column_name] = ((guess_df == target_column)*1)
+			column_data = (guess_df.reset_index(drop=True)) == (target_column.reset_index(drop=True))
+			logging.debug("guess_df is %s" % guess_df)
+			logging.debug("target_column is %s" % target_column)
+			logging.debug("column data: %s" % column_data)
+			astypefloat = column_data.astype(float)
+			logging.debug("as type float %s" % astypefloat)
+			asaseries = pd.Series(data=astypefloat.values, index=target_column.index, dtype=float)
+			logging.debug("As a series: %s" % asaseries)
+			correctness_df[column_name] = asaseries
+			logging.debug("Column in correctness_df %s is %s" % (column_name, correctness_df[column_name]))
+
 
 		correctness_df['answer'] = target_column
 		logging.debug("correctness_df: %s" % correctness_df)
+		
 		return correctness_df
 
 
