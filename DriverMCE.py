@@ -73,6 +73,12 @@ logging.debug("Size of section dataframe is %s" % str(SECTION_DATA.shape))
 logging.debug("Size of backup dataframe is %s" % str(BACKUP_DATA.shape))
 
 ALL_DATA = BACKUP_DATA.append(SECTION_DATA)
+logging.debug("Confirmed_mode column is %s" % ALL_DATA['confirmed_mode'])
+
+if ALL_DATA['confirmed_mode'].dtype == object:
+	ALL_DATA = ALL_DATA[ALL_DATA['confirmed_mode'] != "Please Specify:"]
+
+# ALL_DATA = ALL_DATA[ALL_DATA['confirmed_mode'] != 'Please Specify:']
 # We are only using confirmed data for this test. Even the threshold test
 #	because we would need to simulate "prompting "
 all_target_values 		= list(ALL_DATA[TARGET].unique())
