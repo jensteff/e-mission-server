@@ -66,8 +66,8 @@ backupSections = MongoClient('localhost').Backup_database.Stage_Sections
 
 start = clock()
 
-SECTION_DATA 				= pd.DataFrame(list(SectionsColl.find({'$and' : [{ 'confirmed_mode' : {'$exists' : True }}, {'confirmed_mode' : {'$ne' : ''}}, {'confirmed_mode': {'$ne' : 'Please Specify'}}]})))
-BACKUP_DATA 			 	= pd.DataFrame(list(backupSections.find({'$and' : [{ 'confirmed_mode' : {'$exists' : True }}, {'confirmed_mode' : {'$ne' : ''}}, {'confirmed_mode': {'$ne' : 'Please Specify'}}]})))
+SECTION_DATA 				= pd.DataFrame(list(SectionsColl.find({'$and' : [{ 'confirmed_mode' : {'$exists' : True }}, {'confirmed_mode' : {'$ne' : ''}}, {'confirmed_mode': {'$ne' : 'Please Specify:'}}]})))
+BACKUP_DATA 			 	= pd.DataFrame(list(backupSections.find({'$and' : [{ 'confirmed_mode' : {'$exists' : True }}, {'confirmed_mode' : {'$ne' : ''}}, {'confirmed_mode': {'$ne' : 'Please Specify:'}}]})))
 
 logging.debug("Size of section dataframe is %s" % str(SECTION_DATA.shape))
 logging.debug("Size of backup dataframe is %s" % str(BACKUP_DATA.shape))
@@ -77,6 +77,7 @@ ALL_DATA = BACKUP_DATA.append(SECTION_DATA)
 #	because we would need to simulate "prompting "
 all_target_values 		= list(ALL_DATA[TARGET].unique())
 logging.debug("All target values found in dataset: %s" % all_target_values)
+sys.exit()
 for idx in range(len(all_target_values)):
 	try: 
 		float(all_target_values[idx])
