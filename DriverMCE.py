@@ -4,7 +4,7 @@
 
 import logging
 # import emission.analysis.classification.inference.mode.oldMode as om
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)#, filename='MCEoutput.log')
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename='newMCEoutput.log')
 
 import numpy as np
 import pandas as pd 
@@ -93,7 +93,6 @@ logging.debug("all target values after cleaning: %s" % str(all_target_values))
 logging.debug("all user uuids: %s" % str(all_user_uuids))
 logging.debug("Confirmed_mode column is %s" % ALL_DATA['confirmed_mode'])
 
-sys.exit()
 
 if len(all_user_uuids) <= 100:
 	user_uuids_to_test = all_user_uuids
