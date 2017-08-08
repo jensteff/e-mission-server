@@ -4,7 +4,7 @@
 
 import logging
 # import emission.analysis.classification.inference.mode.oldMode as om
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)#, filename='newMCEoutput.log')
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename='newMCEoutput.log')
 
 import numpy as np
 import pandas as pd 
@@ -283,7 +283,7 @@ for MY_USER_ID in user_uuids_to_test:
 	except Exception, e:
 		logging.debug("Skipping processing user number %s, %s due to error %s" (current_uuid_number, MY_USER_ID, e))
 		continue
-		
+
 print all_threshold_df
 print all_confidence_df
 
