@@ -4,7 +4,7 @@
 
 import logging
 # import emission.analysis.classification.inference.mode.oldMode as om
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename='newMCEoutput.log')
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)#, filename='newMCEoutput.log')
 
 import numpy as np
 import pandas as pd 
@@ -55,10 +55,7 @@ def myexcepthook(*exc_info):
     text = "".join(traceback.format_exception(*exc_info))
     logging.error("Unhandled exception: %s", text)
 
-# def log_uncaught_exceptions(ex_cls, ex, tb):
-# 	logging.critical(''.join(traceback.format_tb(tb)))
-# 	logging.critical('{0}: {1}'.format(ex_cls, ex))
-# Install exception handler
+
 sys.excepthook = myexcepthook
 
 
@@ -137,6 +134,11 @@ for MY_USER_ID in user_uuids_to_test:
 	#We have to sort only MY_DATA here because we are using it to test as well as train.
 
 	MY_DATA_TRAIN				  = MY_DATA.iloc[:int((MY_DATA.shape[0])*MY_DATA_TEST_SIZE*-1)]
+
+	if MY_DATA_TRAIN.shape[0] < 1:
+		logging.debug("Not enough rows in user training set. Skipping user number %s, %s" % (current_uuid_number, MY_USER_ID))
+		continue
+
 	my_data_train_target_values   = MY_DATA_TRAIN[TARGET].unique()
 
 	logging.debug("My data train shape: %s" % str(MY_DATA_TRAIN.shape))
@@ -153,7 +155,16 @@ for MY_USER_ID in user_uuids_to_test:
 
 	WEIGHTER_TRAIN 			= MY_DATA.iloc[int((MY_DATA.shape[0])*MY_DATA_TEST_SIZE*-1):int((MY_DATA.shape[0])*INTELLIGENT_TRAIN_DATA_SIZE*-1)]
 
+	if WEIGHTER_TRAIN.shape[0] < 1:
+		logging.debug("Not enough rows in weigher training set. Skipping user number %s, %s" % (current_uuid_number, MY_USER_ID))
+		continue
+
 	MY_DATA_TEST 			= MY_DATA.iloc[int((MY_DATA.shape[0])*INTELLIGENT_TRAIN_DATA_SIZE*-1):]
+
+	if MY_DATA_TEST.shape[0] < 1:
+		logging.debug("Not enough rows in user testing set. Skipping user number %s, %s" % (current_uuid_number, MY_USER_ID))
+		continue
+
 	MY_DATA_TEST_TARGET		= MY_DATA_TEST[TARGET]
 	MY_DATA_TEST 			= MY_DATA_TEST.drop(TARGET, axis=1)
 
