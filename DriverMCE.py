@@ -257,7 +257,7 @@ for MY_USER_ID in user_uuids_to_test:
 
 	logging.debug("Best aggregator set")
 
-	threshold_df  = MCE.testThresholds(MY_DATA_TEST, [.3, .4, .5, .6, .7], examples_target=MY_DATA_TEST_TARGET,  attach_target=True, timeit=True)
+	threshold_df  = MCE.testThresholds(MY_DATA_TEST, [.4, .5, .6, .7], examples_target=MY_DATA_TEST_TARGET,  attach_target=True, timeit=True)
 	logging.debug("Threshold_df: %s" % threshold_df)
 	confidence_df = MCE.testConfidenceMeasures(MY_TEST_DF, MY_DATA_TEST_TARGET, attach_predictions_prob_df=True, attach_agg_df=True, timeit=True)
 	logging.debug("Confidence_df: %s" % confidence_df)
